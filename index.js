@@ -4,7 +4,13 @@ const axios = require('axios')
 const soap = require('soap')
 const dotenv = require('dotenv')
 const Keycloak = require('keycloak-backend').Keycloak
+var fs = require('node:fs')
 dotenv.config();
+
+const logFileName = 'logs.txt'
+var logMessage = `Started Node app ${new Date().toLocaleString()} \n`;
+
+fs.appendFile(logFileName, logMessage, function (err) {})
 
 
 const keycloak = new Keycloak({
@@ -35,12 +41,14 @@ const getAllCommunicationRequest = async function(req, res) {
     const commReqIds = [];
 
     try {
-        console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Checking active CommunicationRequest`)
+        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Checking active CommunicationRequest \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
 
         const response = await fetch(url, options)
         const jsonResponse = await response.json();
 
-        console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total}`)
+        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total} \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
 
         // const commReqArray = jsonResponse.entry;
 
@@ -70,7 +78,8 @@ const getAllCommunicationRequest = async function(req, res) {
                 const url = process.env.HAPI_BASE_URL + '/' + patientId;
 
                 try {
-                    console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information`)
+                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information \n`
+                    fs.appendFile(logFileName, logMessage, function (err) {})
             
                     const patientResourceResponse = await fetch(url, options)
                     const patientJsonResponse = await patientResourceResponse.json();
@@ -81,7 +90,8 @@ const getAllCommunicationRequest = async function(req, res) {
                     // const commReqArray = jsonResponse.entry;
 
                 } catch(err) {
-                    console.log('ERROR ', err);
+                    logMessage = `ERROR ', ${err} \n`
+                    fs.appendFile(logFileName, logMessage, function (err) {})
                 }
             }
 
@@ -91,7 +101,8 @@ const getAllCommunicationRequest = async function(req, res) {
                 const url = process.env.HAPI_BASE_URL + '/ServiceRequest?subject=' + patientId;
 
                 try {
-                    console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information`)
+                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
+                    fs.appendFile(logFileName, logMessage, function (err) {})
             
                     const servReqResourceResponse = await fetch(url, options)
                     const servReqJsonResponse = await servReqResourceResponse.json();
@@ -102,7 +113,8 @@ const getAllCommunicationRequest = async function(req, res) {
                     // const commReqArray = jsonResponse.entry;
 
                 } catch(err) {
-                    console.log('ERROR ', err);
+                    logMessage = `ERROR, ${err} \n`
+                    fs.appendFile(logFileName, logMessage, function (err) {})
                 }
             }
 
@@ -157,16 +169,20 @@ const getAllCommunicationRequest = async function(req, res) {
                 
                 soap.createClient(process.env.SMS_GTWY_PROVIDER_URL, function(err, client) {
                     if(err) {
-                        console.error(err)
+                        logMessage = `Error: ${err} \n`
+                        fs.appendFile(logFileName, logMessage, function (err) {})
                     } else {
                         
                         const createSessionArgs = {user: {username: process.env.SMS_GTWY_USERNAME, password: process.env.SMS_GTWY_PASSWORD}}
                 
                         client.createSession(createSessionArgs, function(err, result) {
                             if(err) {
-                                console.error(err)
+                                logMessage = `Error: ${err} \n`
+                                fs.appendFile(logFileName, logMessage, function (err) {})
                             } else {
-                                console.log('createSession')
+                                // console.log('createSession')
+                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Session Initiated \n`
+                                fs.appendFile(logFileName, logMessage, function (err) {})
                 
                                 const session =  result;
                                 // console.log(session);
@@ -187,16 +203,23 @@ const getAllCommunicationRequest = async function(req, res) {
                             
                                     client.sendMessages(sendMessagesArgs, function(err, result) {
                                         if(err) {
-                                            console.error(err)
+                                            logMessage = `Error: ${err} \n`
+                                            fs.appendFile(logFileName, logMessage, function (err) {})
                                         } else {
                                             // console.log('sendMessage')
-                                            console.log(result.return); // <--- should get 200
+                                            // console.log(result.return); // <--- should get 200
     
                                             if(result.return == 200) {
                                                 // store in the db
-                                                console.log("Sent");
+                                                // console.log("Sent");
+                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
                                             } else {
-                                                console.log("Error");
+                                                logMessage = `Error: ${err} \n`
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
                                             }
                                         }
                                     })
@@ -215,16 +238,23 @@ const getAllCommunicationRequest = async function(req, res) {
                             
                                     client.sendMessagesMultiLang(sendMessagesArgs, function(err, result) {
                                         if(err) {
-                                            console.error(err)
+                                            logMessage = `Error: ${err} \n`
+                                            fs.appendFile(logFileName, logMessage, function (err) {})
                                         } else {
                                             // console.log('sendMessage')
-                                            console.log(result.return); // <--- should get 200
+                                            // console.log(result.return); // <--- should get 200
     
                                             if(result.return == 200) {
                                                 // store in the db
-                                                console.log("Sent");
+                                                // console.log("Sent");
+                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
                                             } else {
-                                                console.log("Error");
+                                                logMessage = `Error: ${err} \n`
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
                                             }
                                         }
                                     })
@@ -252,7 +282,8 @@ const getAllCommunicationRequest = async function(req, res) {
     }
 
     } catch(err) {
-        console.log('ERROR ', err);
+        logMessage = `Error: ${err} \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
     }
 
 }
@@ -292,12 +323,14 @@ const upcomingAppointmentReminder = async function(req, res) {
     // const commReqIds = [];
 
     try {
-        console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Checking active ServiceRequest`)
+        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Checking active ServiceRequest \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
 
         const response = await fetch(url, options)
         const jsonResponse = await response.json();
 
-        console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total}`)
+        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total} \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
 
         if(jsonResponse.total > 0) {
 
@@ -334,7 +367,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                         const url = process.env.HAPI_BASE_URL + '/' + patientId;
 
                         try {
-                            console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information`)
+                            logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information \n`
+                            fs.appendFile(logFileName, logMessage, function (err) {})
                     
                             const patientResourceResponse = await fetch(url, options)
                             const patientJsonResponse = await patientResourceResponse.json();
@@ -345,7 +379,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                             // const commReqArray = jsonResponse.entry;
 
                         } catch(err) {
-                            console.log('ERROR ', err);
+                            logMessage = `Error: ${err} \n`
+                            fs.appendFile(logFileName, logMessage, function (err) {})
                         }
                     }
 
@@ -400,16 +435,20 @@ const upcomingAppointmentReminder = async function(req, res) {
                         
                         soap.createClient(process.env.SMS_GTWY_PROVIDER_URL, function(err, client) {
                             if(err) {
-                                console.error(err)
+                                logMessage = `Error: ${err} \n`
+                                fs.appendFile(logFileName, logMessage, function (err) {})
                             } else {
                                 
                                 const createSessionArgs = {user: {username: process.env.SMS_GTWY_USERNAME, password: process.env.SMS_GTWY_PASSWORD}}
                         
                                 client.createSession(createSessionArgs, function(err, result) {
                                     if(err) {
-                                        console.error(err)
+                                        logMessage = `Error: ${err} \n`
+                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                     } else {
-                                        console.log('createSession')
+                                        // console.log('createSession')
+                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Session Initiated \n`
+                                        fs.appendFile(logFileName, logMessage, function (err) {})
                         
                                         const session =  result;
                                         // console.log(session);
@@ -430,16 +469,23 @@ const upcomingAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessages(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    console.error(err)
+                                                    logMessage = `Error: ${err} \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
-                                                    console.log(result.return); // <--- should get 200
+                                                    // console.log(result.return); // <--- should get 200
             
                                                     if(result.return == 200) {
                                                         // store in the db
-                                                        console.log("Sent");
+                                                        // console.log("Sent");
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        console.log("Error");
+                                                        logMessage = `Error: ${err} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
                                             })
@@ -458,16 +504,23 @@ const upcomingAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessagesMultiLang(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    console.error(err)
+                                                    logMessage = `Error: ${err} \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
-                                                    console.log(result.return); // <--- should get 200
+                                                    // console.log(result.return); // <--- should get 200
             
                                                     if(result.return == 200) {
                                                         // store in the db
-                                                        console.log("Sent");
+                                                        // console.log("Sent");
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        console.log("Error");
+                                                        logMessage = `Error: \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
                                             })
@@ -482,21 +535,15 @@ const upcomingAppointmentReminder = async function(req, res) {
         
                     consolidatedData();
 
-
-
                 }
 
             });
 
-
-
-            
-            
-
         }
 
     } catch(err) {
-        console.log('ERROR ', err);
+        logMessage = `Error: ${err} \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
     }
 
 }
@@ -531,12 +578,14 @@ const missedAppointmentReminder = async function(req, res) {
     // const commReqIds = [];
 
     try {
-        console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Checking active ServiceRequest`)
+        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Checking active ServiceRequest \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
 
         const response = await fetch(url, options)
         const jsonResponse = await response.json();
 
-        console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total}`)
+        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total} \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
 
         if(jsonResponse.total > 0) {
 
@@ -574,7 +623,8 @@ const missedAppointmentReminder = async function(req, res) {
                         const url = process.env.HAPI_BASE_URL + '/' + patientId;
 
                         try {
-                            console.log(`PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information`)
+                            logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information \n`
+                            fs.appendFile(logFileName, logMessage, function (err) {})
                     
                             const patientResourceResponse = await fetch(url, options)
                             const patientJsonResponse = await patientResourceResponse.json();
@@ -585,7 +635,8 @@ const missedAppointmentReminder = async function(req, res) {
                             // const commReqArray = jsonResponse.entry;
 
                         } catch(err) {
-                            console.log('ERROR ', err);
+                            logMessage = `Error: ${err} \n`
+                            fs.appendFile(logFileName, logMessage, function (err) {})
                         }
                     }
 
@@ -602,9 +653,9 @@ const missedAppointmentReminder = async function(req, res) {
                         // const facilityName = serviceReqData.entry[0].resource.locationReference[0].display;
                         // const referralDate = (serviceReqData.entry[0].resource.occurrencePeriod.start).substring(0, 10);
         
-                        console.log(prefLanguage);
-                        console.log(patientId);
-                        console.log(servReqResourceId);
+                        // console.log(prefLanguage);
+                        // console.log(patientId);
+                        // console.log(servReqResourceId);
 
                         if(patientData.identifier[1]) {
                             patientNic = '('+patientData.identifier[1].value+')';
@@ -644,16 +695,20 @@ const missedAppointmentReminder = async function(req, res) {
                         
                         soap.createClient(process.env.SMS_GTWY_PROVIDER_URL, function(err, client) {
                             if(err) {
-                                console.error(err)
+                                logMessage = `Error: ${err} \n`
+                                fs.appendFile(logFileName, logMessage, function (err) {})
                             } else {
                                 
                                 const createSessionArgs = {user: {username: process.env.SMS_GTWY_USERNAME, password: process.env.SMS_GTWY_PASSWORD}}
                         
                                 client.createSession(createSessionArgs, function(err, result) {
                                     if(err) {
-                                        console.error(err)
+                                        logMessage = `Error: ${err} \n`
+                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                     } else {
-                                        console.log('createSession')
+                                        // console.log('createSession')
+                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Session Initiated \n`
+                                        fs.appendFile(logFileName, logMessage, function (err) {})
                         
                                         const session =  result;
                                         // console.log(session);
@@ -674,16 +729,23 @@ const missedAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessages(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    console.error(err)
+                                                    logMessage = `Error: ${err} \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
-                                                    console.log(result.return); // <--- should get 200
+                                                    // console.log(result.return); // <--- should get 200
             
                                                     if(result.return == 200) {
                                                         // store in the db
-                                                        console.log("Sent");
+                                                        // console.log("Sent");
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        console.log("Error");
+                                                        logMessage = `Error \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
                                             })
@@ -702,16 +764,23 @@ const missedAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessagesMultiLang(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    console.error(err)
+                                                    logMessage = `Error: ${err} \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
-                                                    console.log(result.return); // <--- should get 200
+                                                    // console.log(result.return); // <--- should get 200
             
                                                     if(result.return == 200) {
                                                         // store in the db
-                                                        console.log("Sent");
+                                                        // console.log("Sent");
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        console.log("Error");
+                                                        logMessage = `Error: \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
                                             })
@@ -733,7 +802,8 @@ const missedAppointmentReminder = async function(req, res) {
         }
 
     } catch(err) {
-        console.log('ERROR ', err);
+        logMessage = `Error: ${err} \n`
+        fs.appendFile(logFileName, logMessage, function (err) {})
     }
 
 }
