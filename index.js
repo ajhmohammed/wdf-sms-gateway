@@ -3,6 +3,7 @@ const app = express()
 const axios = require('axios')
 const soap = require('soap')
 const dotenv = require('dotenv')
+const cron = require('node-cron')
 const Keycloak = require('keycloak-backend').Keycloak
 var fs = require('node:fs')
 dotenv.config();
@@ -822,6 +823,12 @@ app.get('/missedAppointment', (req, res) => {
 
 
 //clients who has missed the appointment yesterday
+
+cron.schedule('* * * * *', () => {
+    console.log('test')
+    logMessage = `LIVE: NODE service live, ${new Date().toLocaleString()} \n`
+    fs.appendFile(logFileName, logMessage, function (err) {})
+});
 
 
 app.listen(process.env.PORT, () => {
