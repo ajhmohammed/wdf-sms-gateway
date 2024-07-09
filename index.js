@@ -218,6 +218,46 @@ const getAllCommunicationRequest = async function(req, res) {
 
                                                 logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
                                                 fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                //change CR status
+                                                const changeCommicationRequestStatus = async function(req, res) {
+
+                                                    const urlBody = [
+                                                        { "op": "test", "path": "/status", "value": "active" },
+                                                        { "op": "replace", "path": "/status", "value": "completed" }
+                                                    ];
+
+                                                    const options = {
+                                                        method: 'PATCH',
+                                                        headers: {
+                                                            "Content-Type": `application/json-patch+json`,
+                                                            Authorization: ` Bearer ${accessToken}`
+                                                        },
+                                                        body: {
+                                                            urlBody
+                                                        }
+                                                    }
+
+                                                    const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
+
+                                                    try {
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+                                                
+                                                        const servReqResourceResponse = await fetch(url, options)
+                                                        const servReqJsonResponse = await servReqResourceResponse.json();
+
+                                                        // console.log(servReqJsonResponse);
+                                                        return servReqJsonResponse;
+                                                        
+                                                        // const commReqArray = jsonResponse.entry;
+
+                                                    } catch(err) {
+                                                        logMessage = `ERROR, ${err} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+                                                    }
+                                                }
+
                                             } else {
                                                 logMessage = `Error: ${err} \n`
                                                 fs.appendFile(logFileName, logMessage, function (err) {})
@@ -253,6 +293,45 @@ const getAllCommunicationRequest = async function(req, res) {
 
                                                 logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
                                                 fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                //change CR status
+                                                const changeCommicationRequestStatus = async function(req, res) {
+
+                                                    const urlBody = [
+                                                        { "op": "test", "path": "/status", "value": "active" },
+                                                        { "op": "replace", "path": "/status", "value": "completed" }
+                                                    ];
+
+                                                    const options = {
+                                                        method: 'PATCH',
+                                                        headers: {
+                                                            "Content-Type": `application/json-patch+json`,
+                                                            Authorization: ` Bearer ${accessToken}`
+                                                        },
+                                                        body: {
+                                                            urlBody
+                                                        }
+                                                    }
+
+                                                    const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
+
+                                                    try {
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+                                                
+                                                        const servReqResourceResponse = await fetch(url, options)
+                                                        const servReqJsonResponse = await servReqResourceResponse.json();
+
+                                                        // console.log(servReqJsonResponse);
+                                                        return servReqJsonResponse;
+                                                        
+                                                        // const commReqArray = jsonResponse.entry;
+
+                                                    } catch(err) {
+                                                        logMessage = `ERROR, ${err} \n`
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+                                                    }
+                                                }
                                             } else {
                                                 logMessage = `Error: ${err} \n`
                                                 fs.appendFile(logFileName, logMessage, function (err) {})
