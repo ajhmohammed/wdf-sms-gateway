@@ -222,33 +222,36 @@ const getAllCommunicationRequest = async function(req, res) {
                                                 //change CR status
                                                 const changeCommicationRequestStatus = async function(req, res) {
 
-                                                    const urlBody = [
-                                                        { "op": "test", "path": "/status", "value": "active" },
-                                                        { "op": "replace", "path": "/status", "value": "completed" }
-                                                    ];
+                                                    // console.log("Started closing CR");
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Started Closing CR \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                    const urlBody = '[{ "op": "replace", "path": "/status", "value": "active"},{ "op": "replace", "path": "/status", "value": "completed"}]'
 
                                                     const options = {
                                                         method: 'PATCH',
                                                         headers: {
-                                                            "Content-Type": `application/json-patch+json`,
+                                                            'Content-Type': 'application/json-patch+json',
                                                             Authorization: ` Bearer ${accessToken}`
                                                         },
-                                                        body: {
-                                                            urlBody
-                                                        }
+                                                        body: urlBody
                                                     }
 
                                                     const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
+
+                                                    // console.log(url);
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Updating CR on: ${url} \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
 
                                                     try {
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                 
-                                                        const servReqResourceResponse = await fetch(url, options)
-                                                        const servReqJsonResponse = await servReqResourceResponse.json();
+                                                        const servReqCRResourceResponse = await fetch(url, options)
+                                                        const servReqCRJsonResponse = await servReqCRResourceResponse.json();
 
-                                                        // console.log(servReqJsonResponse);
-                                                        return servReqJsonResponse;
+                                                        console.log(servReqCRJsonResponse);
+                                                        return servReqCRJsonResponse;
                                                         
                                                         // const commReqArray = jsonResponse.entry;
 
@@ -257,6 +260,8 @@ const getAllCommunicationRequest = async function(req, res) {
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
+
+                                                changeCommicationRequestStatus();
 
                                             } else {
                                                 logMessage = `Error: ${err} \n`
@@ -297,33 +302,36 @@ const getAllCommunicationRequest = async function(req, res) {
                                                 //change CR status
                                                 const changeCommicationRequestStatus = async function(req, res) {
 
-                                                    const urlBody = [
-                                                        { "op": "test", "path": "/status", "value": "active" },
-                                                        { "op": "replace", "path": "/status", "value": "completed" }
-                                                    ];
+                                                    // console.log("Started closing CR");
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Started Closing CR \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                    const urlBody = '[{ "op": "replace", "path": "/status", "value": "active"},{ "op": "replace", "path": "/status", "value": "completed"}]'
 
                                                     const options = {
                                                         method: 'PATCH',
                                                         headers: {
-                                                            "Content-Type": `application/json-patch+json`,
+                                                            'Content-Type': 'application/json-patch+json',
                                                             Authorization: ` Bearer ${accessToken}`
                                                         },
-                                                        body: {
-                                                            urlBody
-                                                        }
+                                                        body: urlBody
                                                     }
 
                                                     const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
+
+                                                    // console.log(url);
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Updating CR on: ${url} \n`
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
 
                                                     try {
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                 
-                                                        const servReqResourceResponse = await fetch(url, options)
-                                                        const servReqJsonResponse = await servReqResourceResponse.json();
+                                                        const servReqCRResourceResponse = await fetch(url, options)
+                                                        const servReqCRJsonResponse = await servReqCRResourceResponse.json();
 
-                                                        // console.log(servReqJsonResponse);
-                                                        return servReqJsonResponse;
+                                                        console.log(servReqCRJsonResponse);
+                                                        return servReqCRJsonResponse;
                                                         
                                                         // const commReqArray = jsonResponse.entry;
 
@@ -332,6 +340,9 @@ const getAllCommunicationRequest = async function(req, res) {
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
+
+                                                changeCommicationRequestStatus();
+
                                             } else {
                                                 logMessage = `Error: ${err} \n`
                                                 fs.appendFile(logFileName, logMessage, function (err) {})
