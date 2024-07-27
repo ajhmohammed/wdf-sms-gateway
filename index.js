@@ -141,8 +141,8 @@ const getAllCommunicationRequest = async function(req, res) {
                 const referralSmsTemplate = {
                     client_at_risk_and_referred: {
                         "en": "{clientName}, please visit the Healthy Lifestyle Centre at {facilityName} on {referralDate} for a full screening. Remember to bring this SMS with your NIC {nicNumber} and PHN {phnNumber} to the facility.",
-                        "si": "{clientName}, සම්පූර්ණ පරීක්‍ෂණයක් සඳහා කරුණාකර {referralDate} වන දින {facilityName} සෞඛ්‍ය සම්පන්න ජීවන රටා මධ්‍යස්ථානය වෙත පිවිසෙන්න. ඔබගේ NIC {nicNumber} සහ PHN {phnNumber} සමඟ මෙම SMS පහසුකම වෙත ගෙන ඒමට මතක තබා ගන්න.",
-                        "ta": "{clientName}, முழுத் திரையிடலுக்கு {referralDate} அன்று {facilityName} உள்ள ஆரோக்கியமான வாழ்க்கை முறை மையத்தைப் பார்வையிடவும். உங்கள் NIC {nicNumber} மற்றும் PHN {phnNumber} உடன் இந்த SMS ஐ வசதிக்கு கொண்டு வர நினைவில் கொள்ளுங்கள்.",
+                        "si": "{clientName}, කරුණාකර {facilityName} එකෙහි ඇති සුව දිවි මඩ්‍යස්ථා නය වෙත {referralDate} දින පූර්ණ සෞඛ්‍ය පරීක්ෂණයක් කිරීම සඳහා ඔබගේ හැ ඳුනුම්පත් අංකය වන {nicNumber}  සහ PHN අංකය වන {phnNumber} සමග පැ මිණ මෙම SMS පණිවිඩය ඉදිරිපත් කරන්න.",
+                        "ta": "{clientName}, முழு சுகாதார பரிசோதனைக்காக {referralDate} அன்று {facilityName} இல் உள்ள ஆரோக்கியமான வாழ்க்கைமுறை நிலையத்திற்கு செல்லவும். உங்கள் தேசிய அடையாள அட்டை {nicNumber} மற்றும் தனிப்பட்ட சுகாதார எண் {phnNumber} உடன் இந்த குறுஞ்செய்தியை எடுத்து செல்ல மறக்காதீர்கள்.",
                     }
                 }
 
@@ -497,8 +497,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                         const referralSmsTemplate = {
                             client_at_risk_and_referred: {
                                 "en": "{clientName}, please visit the Healthy Lifestyle Centre at {facilityName} tomorrow for a full screening. Remember to bring this SMS with your NIC {nicNumber} and PHN {phnNumber} to the facility.",
-                                "si": "{clientName}, කරුණාකර සම්පූර්ණ දර්ශනයක් සඳහා හෙට {facilityName} හි සෞඛ්‍ය සම්පන්න ජීවන රටා මධ්‍යස්ථානය වෙත පිවිසෙන්න. ඔබගේ NIC {nicNumber} සහ PHN {phnNumber} සමඟ මෙම SMS පහසුකම වෙත ගෙන ඒමට මතක තබා ගන්න.",
-                                "ta": "{clientName}, முழுத் திரையிடலுக்கு, நாளை {facilityName} இல் உள்ள ஆரோக்கியமான வாழ்க்கை முறை மையத்தைப் பார்வையிடவும். உங்கள் NIC {nicNumber} மற்றும் PHN {phnNumber} உடன் இந்த SMS ஐ வசதிக்கு கொண்டு வர நினைவில் கொள்ளுங்கள்.",
+                                "si": "{clientName}, කරුණාකර පූර්ණ සෞඛ්‍ය පරීක්ෂණය සඳහා හෙට දින {facilityName} එකෙහි ඇති සුව දිවි මධ්‍යස්ථානය වෙත යන මෙන් කාරුණිකව මතක් කර සිටිමු. ඔබ පැමිණෙන විට ඔබගේ හැ ඳුනුම්පත් අංකය {nicNumber}  සහ PHN අංකය {phnNumber} සමග පැ මිණ මෙම SMS පණිවිඩය ඉදිරිපත් කරන්න.",
+                                "ta": "{clientName}, முழு சுகாதார பரிசோதனைக்காக, நாளை {facilityName} இல் உள்ள ஆரோக்கியமான வாழ்க்கைமுறை நிலையத்திற்கு செல்லவும். உங்கள் தேசிய அடையாள அட்டை {nicNumber} மற்றும் தனிப்பட்ட சுகாதார எண் {phnNumber} உடன் இந்த குறுஞ்செய்தியை எடுத்து செல்ல மறக்காதீர்கள்.",
                             }
                         }
         
@@ -757,8 +757,8 @@ const missedAppointmentReminder = async function(req, res) {
                         const referralSmsTemplate = {
                             client_at_risk_and_referred: {
                                 "en": "You are late for the full screening at the Healthy Lifestyle Centre. {clientName}, Please visit the Healthy Lifestyle Centre at {facilityName} soon for a full screening. Remember to bring this SMS with your NIC {nicNumber} and PHN {phnNumber} to the facility.",
-                                "si": "සෞඛ්‍ය සම්පන්න ජීවන රටා මධ්‍යස්ථානයේ සම්පූර්ණ දර්ශනය සඳහා ඔබ ප්‍රමාදයි. {clientName}, සම්පූර්ණ පිරික්සීමක් සඳහා කරුණාකර ඉක්මනින් {facilityName} හි සෞඛ්‍ය සම්පන්න ජීවන රටා මධ්‍යස්ථානය වෙත පිවිසෙන්න. ඔබගේ NIC {nicNumber} සහ PHN {phnNumber} සමඟ මෙම SMS පහසුකම වෙත ගෙන ඒමට මතක තබා ගන්න.",
-                                "ta": "ஆரோக்கியமான வாழ்க்கை முறை மையத்தில் முழுத் திரையிடலுக்கு தாமதமாகிவிட்டீர்கள். {clientName}, முழுத் திரையிடலுக்கு விரைவில் {facilityName} இல் உள்ள ஆரோக்கியமான வாழ்க்கை முறை மையத்தைப் பார்வையிடவும். உங்கள் NIC {nicNumber} மற்றும் PHN {phnNumber} உடன் இந்த SMS ஐ வசதிக்கு கொண்டு வர நினைவில் கொள்ளுங்கள்.",
+                                "si": "ඔබට සුව දිවි මධ්‍යස්ථානයේ සංවිධානය කර තිබූ පූර්ණ සෞඛ්‍ය පරීක්ෂණයට සහභාගී වීමට නොහැකි වී ඇත. {clientName} කරුණාකර හැකි ඉක්මනින් සුව දිවි මධ්‍යස්ථානයේ පූර්ණ සෞඛ්‍ය පරීක්‍ෂණය සඳහා සහභාගී වන්න. ඔබ පැමිණෙන විට ඔබගේ හැ ඳුනුම්පත් අංකය {nicNumber}  සහ PHN අංකය {phnNumber} සමග පැ මිණ මෙම SMS පණිවිඩය ඉදිරිපත් කරන්න.",
+                                "ta": " ஆரோக்கியமான வாழ்க்கைமுறை நிலையத்தில் முழு சுகாதார பரிசோதனைக்கு தாமதமாகிவிட்டீர்கள். {clientName}, முழு சுகாதார பரிசோதனைக்காக விரைவில் {facilityName} இல் உள்ள ஆரோக்கியமான வாழ்க்கைமுறை நிலையத்திற்கு செல்லவும். உங்கள் தேசிய அடையாள அட்டை {nicNumber} மற்றும் தனிப்பட்ட சுகாதார எண் {phnNumber} உடன் இந்த குறுஞ்செய்தியை எடுத்து செல்ல மறக்காதீர்கள்.",
                             }
                         }
         
