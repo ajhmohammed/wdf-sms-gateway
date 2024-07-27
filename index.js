@@ -651,7 +651,6 @@ app.get('/upcomingAppointment', (req, res) => {
 });
 
 
-
 const missedAppointmentReminder = async function(req, res) {
 
     const accessToken = await keycloak.accessToken.get();
@@ -690,10 +689,19 @@ const missedAppointmentReminder = async function(req, res) {
                 // console.log(servReqStartDate);
 
                 //Tomorrow mentioned here is yesterday... HAHAHAH -1
-                process.env.TZ = 'Asia/Colombo'
+                // process.env.TZ = 'Asia/Colombo'
+                // let tomorrowDate = new Date();
+                // tomorrowDate.setDate(tomorrowDate.getDate() - 1);
+                // tomorrowDate = tomorrowDate.toISOString().substring(0,10);
+
+
+                process.env.TZ = 'Asia/Colombo';
                 let tomorrowDate = new Date();
-                tomorrowDate.setDate(tomorrowDate.getDate() - 1);
+                // tomorrowDate.setDate(tomorrowDate.getDate());
                 tomorrowDate = tomorrowDate.toISOString().substring(0,10);
+
+                console.log(tomorrowDate)
+
 
                 // console.log(tomorrowDate);
                 
