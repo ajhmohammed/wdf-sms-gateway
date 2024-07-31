@@ -10,6 +10,7 @@ dotenv.config();
 
 const logFileName = 'logs.txt'
 var logMessage = `Started Node app ${new Date().toLocaleString()} \n`;
+console.log(logMessage)
 
 fs.appendFile(logFileName, logMessage, function (err) {})
 
@@ -43,12 +44,14 @@ const getAllCommunicationRequest = async function(req, res) {
 
     try {
         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Checking active CommunicationRequest \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
 
         const response = await fetch(url, options)
         const jsonResponse = await response.json();
 
         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total} \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
 
         // const commReqArray = jsonResponse.entry;
@@ -59,321 +62,353 @@ const getAllCommunicationRequest = async function(req, res) {
 
             // commReqArryItem = jsonResponse.entry
 
-    if(commReqTotal > 0) {
+        if(commReqTotal > 0) {
 
-        jsonResponse.entry.forEach(commReqArryItem => {
-            
-            //Limit the number of CommunicationRequests handled at a given time (20 request at a batch)
-            // if (commReqIds.length === 21) {
-            //     return false;
-            // }
-
-            // console.log(commReqIds.length)
-
-            const commReqResourceId = commReqArryItem.resource.id;
-            const patientId = commReqArryItem.resource.subject.reference;
-
-            //Fetch Patient Resource
-            const getPatientResource = async function(req, res) {
-
-                const url = process.env.HAPI_BASE_URL + '/' + patientId;
-
-                try {
-                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information \n`
-                    fs.appendFile(logFileName, logMessage, function (err) {})
-            
-                    const patientResourceResponse = await fetch(url, options)
-                    const patientJsonResponse = await patientResourceResponse.json();
-
-                    // console.log(patientJsonResponse);
-                    return patientJsonResponse;
-                    
-                    // const commReqArray = jsonResponse.entry;
-
-                } catch(err) {
-                    logMessage = `ERROR ', ${err} \n`
-                    fs.appendFile(logFileName, logMessage, function (err) {})
-                }
-            }
-
-            //Fetch ServiceRequest Resource
-            const getServiceRequestResource = async function(req, res) {
-
-                const url = process.env.HAPI_BASE_URL + '/ServiceRequest?subject=' + patientId;
-
-                try {
-                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
-                    fs.appendFile(logFileName, logMessage, function (err) {})
-            
-                    const servReqResourceResponse = await fetch(url, options)
-                    const servReqJsonResponse = await servReqResourceResponse.json();
-
-                    // console.log(servReqJsonResponse);
-                    return servReqJsonResponse;
-                    
-                    // const commReqArray = jsonResponse.entry;
-
-                } catch(err) {
-                    logMessage = `ERROR, ${err} \n`
-                    fs.appendFile(logFileName, logMessage, function (err) {})
-                }
-            }
-
-            const consolidatedData = async function(req, res) {
-
-                const patientData = await getPatientResource();
-                const serviceReqData = await getServiceRequestResource();
-
-                const prefLanguage = patientData.communication[0].language.coding[0].code;
-                const patientPhn = '('+patientData.identifier[0].value+')';
-                // const patientNic = patientData.identifier[1].value;
-                const patientName = patientData.name[0].given;
-                const patientPhoneNo = patientData.telecom[0].value;;
-                const facilityName = serviceReqData.entry[0].resource.locationReference[0].display;
-                const referralDate = (serviceReqData.entry[0].resource.occurrencePeriod.start).substring(0, 10);
-
-                if(patientData.identifier[1]) {
-                    patientNic = '('+patientData.identifier[1].value+')';
-                } else {
-                    patientNic = "";
-                }
-
-                const referralSmsTemplate = {
-                    client_at_risk_and_referred: {
-                        "en": "{clientName}, please visit the Healthy Lifestyle Centre at {facilityName} on {referralDate} for a full screening. Remember to bring this SMS with your NIC {nicNumber} and PHN {phnNumber} to the facility.",
-                        "si": "{clientName}, කරුණාකර {facilityName} එකෙහි ඇති සුව දිවි මඩ්‍යස්ථා නය වෙත {referralDate} දින පූර්ණ සෞඛ්‍ය පරීක්ෂණයක් කිරීම සඳහා ඔබගේ හැ ඳුනුම්පත් අංකය වන {nicNumber}  සහ PHN අංකය වන {phnNumber} සමග පැ මිණ මෙම SMS පණිවිඩය ඉදිරිපත් කරන්න.",
-                        "ta": "{clientName}, முழு சுகாதார பரிசோதனைக்காக {referralDate} அன்று {facilityName} இல் உள்ள ஆரோக்கியமான வாழ்க்கைமுறை நிலையத்திற்கு செல்லவும். உங்கள் தேசிய அடையாள அட்டை {nicNumber} மற்றும் தனிப்பட்ட சுகாதார எண் {phnNumber} உடன் இந்த குறுஞ்செய்தியை எடுத்து செல்ல மறக்காதீர்கள்.",
-                    }
-                }
-
-                if (prefLanguage == 'en') {
-                    smsMessage = referralSmsTemplate.client_at_risk_and_referred.en
-                } else if (prefLanguage == 'si') {
-                    smsMessage = referralSmsTemplate.client_at_risk_and_referred.si
-                } else if (prefLanguage == 'ta') {
-                    smsMessage = referralSmsTemplate.client_at_risk_and_referred.ta
-                } else {
-                    smsMessage = "";
-                }
-
-                smsMessage = smsMessage.replace('{clientName}', patientName)
-                smsMessage = smsMessage.replace('{facilityName}', facilityName)
-                smsMessage = smsMessage.replace('{referralDate}', referralDate)
-                smsMessage = smsMessage.replace('{nicNumber}', patientNic)
-                smsMessage = smsMessage.replace('{phnNumber}', patientPhn)
-
-                const smsMessageBody = smsMessage;
-
-                // console.log(smsMessage);
-
-                // SEND SMS
+            jsonResponse.entry.forEach(commReqArryItem => {
                 
-                soap.createClient(process.env.SMS_GTWY_PROVIDER_URL, function(err, client) {
-                    if(err) {
-                        logMessage = `Error: ${err} \n`
+                //Limit the number of CommunicationRequests handled at a given time (20 request at a batch)
+                // if (commReqIds.length === 21) {
+                //     return false;
+                // }
+
+                // console.log(commReqIds.length)
+
+                const commReqResourceId = commReqArryItem.resource.id;
+                const patientId = commReqArryItem.resource.subject.reference;
+
+                //Fetch Patient Resource
+                const getPatientResource = async function(req, res) {
+
+                    const url = process.env.HAPI_BASE_URL + '/' + patientId;
+
+                    try {
+                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information \n`
+                        console.log(logMessage)
                         fs.appendFile(logFileName, logMessage, function (err) {})
-                    } else {
+                
+                        const patientResourceResponse = await fetch(url, options)
+                        const patientJsonResponse = await patientResourceResponse.json();
+
+                        // console.log(patientJsonResponse);
+                        return patientJsonResponse;
                         
-                        const createSessionArgs = {user: {username: process.env.SMS_GTWY_USERNAME, password: process.env.SMS_GTWY_PASSWORD}}
-                
-                        client.createSession(createSessionArgs, function(err, result) {
-                            if(err) {
-                                logMessage = `Error: ${err} \n`
-                                fs.appendFile(logFileName, logMessage, function (err) {})
-                            } else {
-                                // console.log('createSession')
-                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Session Initiated \n`
-                                fs.appendFile(logFileName, logMessage, function (err) {})
-                
-                                const session =  result;
-                                // console.log(session);
+                        // const commReqArray = jsonResponse.entry;
 
-                                // console.log(smsMessageBody)
-                                
-                                if(prefLanguage === 'en') {
-
-                                    const sendMessagesArgs = {
-                                        session: session.return,
-                                        smsMessage: {
-                                            sender: process.env.SMS_GTWY_SENDER_MASK,
-                                            message: smsMessageBody,
-                                            recipients: patientPhoneNo,                                                
-                                            messageType: process.env.SMS_GTWY_MESSAGE_TYPE
-                                        }
-                                    }
-                            
-                                    client.sendMessages(sendMessagesArgs, function(err, result) {
-                                        if(err) {
-                                            logMessage = `Error: ${err} \n`
-                                            fs.appendFile(logFileName, logMessage, function (err) {})
-                                        } else {
-                                            // console.log('sendMessage')
-                                            // console.log(result.return); // <--- should get 200
-    
-                                            if(result.return == 200) {
-                                                // store in the db
-                                                // console.log("Sent");
-                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
-                                                fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
-                                                fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                //change CR status
-                                                const changeCommicationRequestStatus = async function(req, res) {
-
-                                                    // console.log("Started closing CR");
-                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Started Closing CR \n`
-                                                    fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                    const urlBody = '[{ "op": "replace", "path": "/status", "value": "active"},{ "op": "replace", "path": "/status", "value": "completed"}]'
-
-                                                    const options = {
-                                                        method: 'PATCH',
-                                                        headers: {
-                                                            'Content-Type': 'application/json-patch+json',
-                                                            Authorization: ` Bearer ${accessToken}`
-                                                        },
-                                                        body: urlBody
-                                                    }
-
-                                                    const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
-
-                                                    // console.log(url);
-                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Updating CR on: ${url} \n`
-                                                    fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                    try {
-                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
-                                                        fs.appendFile(logFileName, logMessage, function (err) {})
-                                                
-                                                        const servReqCRResourceResponse = await fetch(url, options)
-                                                        const servReqCRJsonResponse = await servReqCRResourceResponse.json();
-
-                                                        console.log(servReqCRJsonResponse);
-                                                        return servReqCRJsonResponse;
-                                                        
-                                                        // const commReqArray = jsonResponse.entry;
-
-                                                    } catch(err) {
-                                                        logMessage = `ERROR, ${err} \n`
-                                                        fs.appendFile(logFileName, logMessage, function (err) {})
-                                                    }
-                                                }
-
-                                                changeCommicationRequestStatus();
-
-                                            } else {
-                                                logMessage = `Error: ${err} \n`
-                                                fs.appendFile(logFileName, logMessage, function (err) {})
-                                            }
-                                        }
-                                    })
-
-                                } else {
-
-                                    const sendMessagesArgs = {
-                                        session: session.return,
-                                        smsMessageMultiLang: {
-                                            sender: process.env.SMS_GTWY_SENDER_MASK,
-                                            message: smsMessageBody,
-                                            recipients: patientPhoneNo,                                                
-                                            messageType: process.env.SMS_GTWY_MESSAGE_TYPE
-                                        }
-                                    }
-                            
-                                    client.sendMessagesMultiLang(sendMessagesArgs, function(err, result) {
-                                        if(err) {
-                                            logMessage = `Error: ${err} \n`
-                                            fs.appendFile(logFileName, logMessage, function (err) {})
-                                        } else {
-                                            // console.log('sendMessage')
-                                            // console.log(result.return); // <--- should get 200
-    
-                                            if(result.return == 200) {
-                                                // store in the db
-                                                // console.log("Sent");
-                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
-                                                fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
-                                                fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                //change CR status
-                                                const changeCommicationRequestStatus = async function(req, res) {
-
-                                                    // console.log("Started closing CR");
-                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Started Closing CR \n`
-                                                    fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                    const urlBody = '[{ "op": "replace", "path": "/status", "value": "active"},{ "op": "replace", "path": "/status", "value": "completed"}]'
-
-                                                    const options = {
-                                                        method: 'PATCH',
-                                                        headers: {
-                                                            'Content-Type': 'application/json-patch+json',
-                                                            Authorization: ` Bearer ${accessToken}`
-                                                        },
-                                                        body: urlBody
-                                                    }
-
-                                                    const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
-
-                                                    // console.log(url);
-                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Updating CR on: ${url} \n`
-                                                    fs.appendFile(logFileName, logMessage, function (err) {})
-
-                                                    try {
-                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
-                                                        fs.appendFile(logFileName, logMessage, function (err) {})
-                                                
-                                                        const servReqCRResourceResponse = await fetch(url, options)
-                                                        const servReqCRJsonResponse = await servReqCRResourceResponse.json();
-
-                                                        console.log(servReqCRJsonResponse);
-                                                        return servReqCRJsonResponse;
-                                                        
-                                                        // const commReqArray = jsonResponse.entry;
-
-                                                    } catch(err) {
-                                                        logMessage = `ERROR, ${err} \n`
-                                                        fs.appendFile(logFileName, logMessage, function (err) {})
-                                                    }
-                                                }
-
-                                                changeCommicationRequestStatus();
-
-                                            } else {
-                                                logMessage = `Error: ${err} \n`
-                                                fs.appendFile(logFileName, logMessage, function (err) {})
-                                            }
-                                        }
-                                    })
-
-                                }
-                
-                            }
-                        })
+                    } catch(err) {
+                        logMessage = `ERROR (getAllComm_getPatientResource_99)', ${err} \n`
+                        console.log(logMessage)
+                        fs.appendFile(logFileName, logMessage, function (err) {})
                     }
-                })
-            }
+                }
 
-            consolidatedData();
+                //Fetch ServiceRequest Resource
+                const getServiceRequestResource = async function(req, res) {
+
+                    const url = process.env.HAPI_BASE_URL + '/ServiceRequest?subject=' + patientId;
+
+                    try {
+                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
+                        console.log(logMessage)
+                        fs.appendFile(logFileName, logMessage, function (err) {})
+                
+                        const servReqResourceResponse = await fetch(url, options)
+                        const servReqJsonResponse = await servReqResourceResponse.json();
+
+                        // console.log(servReqJsonResponse);
+                        return servReqJsonResponse;
+                        
+                        // const commReqArray = jsonResponse.entry;
+
+                    } catch(err) {
+                        logMessage = `ERROR (getAllComm_getServiceRequestResource_124), ${err} \n`
+                        console.log(logMessage)
+                        fs.appendFile(logFileName, logMessage, function (err) {})
+                    }
+                }
+
+                const consolidatedData = async function(req, res) {
+
+                    const patientData = await getPatientResource();
+                    const serviceReqData = await getServiceRequestResource();
+
+                    // console.log(patientData)
+
+                    const prefLanguage = patientData.communication[0].language.coding[0].code;
+                    const patientPhn = '('+patientData.identifier[0].value+')';
+                    // const patientNic = patientData.identifier[1].value;
+                    const patientName = patientData.name[0].given;
+                    const patientPhoneNo = patientData.telecom[0].value;;
+                    const facilityName = serviceReqData.entry[0].resource.locationReference[0].display;
+                    const referralDate = (serviceReqData.entry[0].resource.occurrencePeriod.start).substring(0, 10);
+
+                    if(patientData.identifier.find(o => o.use === 'usual')) {
+                        patientNic = '('+patientData.identifier.find(o => o.use === 'usual').value+')';
+                    } else {
+                        patientNic = "";
+                    }
+
+                    console.log("PATIENT: ", patientData.telecom)
+                    console.log("PATIENT PHONE NUMBER: ", patientPhoneNo)
+
+                    const referralSmsTemplate = {
+                        client_at_risk_and_referred: {
+                            "en": "{clientName}, please visit the Healthy Lifestyle Centre at {facilityName} on {referralDate} for a full screening. Remember to bring this SMS with your NIC {nicNumber} and PHN {phnNumber} to the facility.",
+                            "si": "{clientName}, කරුණාකර {facilityName} එකෙහි ඇති සුව දිවි මඩ්‍යස්ථා නය වෙත {referralDate} දින පූර්ණ සෞඛ්‍ය පරීක්ෂණයක් කිරීම සඳහා ඔබගේ හැ ඳුනුම්පත් අංකය වන {nicNumber}  සහ PHN අංකය වන {phnNumber} සමග පැ මිණ මෙම SMS පණිවිඩය ඉදිරිපත් කරන්න.",
+                            "ta": "{clientName}, முழு சுகாதார பரிசோதனைக்காக {referralDate} அன்று {facilityName} இல் உள்ள ஆரோக்கியமான வாழ்க்கைமுறை நிலையத்திற்கு செல்லவும். உங்கள் தேசிய அடையாள அட்டை {nicNumber} மற்றும் தனிப்பட்ட சுகாதார எண் {phnNumber} உடன் இந்த குறுஞ்செய்தியை எடுத்து செல்ல மறக்காதீர்கள்.",
+                        }
+                    }
+
+                    if (prefLanguage == 'en') {
+                        smsMessage = referralSmsTemplate.client_at_risk_and_referred.en
+                    } else if (prefLanguage == 'si') {
+                        smsMessage = referralSmsTemplate.client_at_risk_and_referred.si
+                    } else if (prefLanguage == 'ta') {
+                        smsMessage = referralSmsTemplate.client_at_risk_and_referred.ta
+                    } else {
+                        smsMessage = "";
+                    }
+
+                    smsMessage = smsMessage.replace('{clientName}', patientName)
+                    smsMessage = smsMessage.replace('{facilityName}', facilityName)
+                    smsMessage = smsMessage.replace('{referralDate}', referralDate)
+                    smsMessage = smsMessage.replace('{nicNumber}', patientNic)
+                    smsMessage = smsMessage.replace('{phnNumber}', patientPhn)
+
+                    const smsMessageBody = smsMessage;
+
+                    // console.log(smsMessage);
+
+                    // SEND SMS
+                    
+                    soap.createClient(process.env.SMS_GTWY_PROVIDER_URL, function(err, client) {
+                        if(err) {
+                            logMessage = `Error (getAllComm_consolidateData_createClient_186): ${err} \n`
+                            console.log(logMessage)
+                            fs.appendFile(logFileName, logMessage, function (err) {})
+                        } else {
+                            
+                            const createSessionArgs = {user: {username: process.env.SMS_GTWY_USERNAME, password: process.env.SMS_GTWY_PASSWORD}}
+                    
+                            client.createSession(createSessionArgs, function(err, result) {
+                                if(err) {
+                                    logMessage = `Error (getAllComm_CreateSession_195): ${err} \n`
+                                    console.log(logMessage)
+                                    fs.appendFile(logFileName, logMessage, function (err) {})
+                                } else {
+                                    // console.log('createSession')
+                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Session Initiated \n`
+                                    console.log(logMessage)
+                                    fs.appendFile(logFileName, logMessage, function (err) {})
+                    
+                                    const session =  result;
+                                    console.log(session);
+
+                                    console.log(smsMessageBody)                                
+                                    
+                                    if(prefLanguage === 'en') {
+
+                                        // console.log('ENG Message')
+
+                                        const sendMessagesArgs = {
+                                            session: session.return,
+                                            smsMessage: {
+                                                sender: process.env.SMS_GTWY_SENDER_MASK,
+                                                message: smsMessageBody,
+                                                recipients: patientPhoneNo,                                                
+                                                messageType: process.env.SMS_GTWY_MESSAGE_TYPE
+                                            }
+                                        }
+                                
+                                        client.sendMessages(sendMessagesArgs, function(err, result) {
+                                            if(err) {
+                                                logMessage = `Error (getAllComm_PreLang_EN_227): ${err} \n`
+                                                console.log(logMessage)
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
+                                            } else {
+                                                // console.log('sendMessage')
+                                                console.log(result.return); // <--- should get 200
+        
+                                                if(result.return == 200) {
+                                                    // store in the db
+                                                    // console.log("Sent");
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                    console.log(logMessage)
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                    console.log(logMessage)
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                    //change CR status
+                                                    const changeCommicationRequestStatus = async function(req, res) {
+
+                                                        // console.log("Started closing CR");
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Started Closing CR \n`
+                                                        console.log(logMessage)
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        const urlBody = '[{ "op": "replace", "path": "/status", "value": "active"},{ "op": "replace", "path": "/status", "value": "completed"}]'
+
+                                                        const options = {
+                                                            method: 'PATCH',
+                                                            headers: {
+                                                                'Content-Type': 'application/json-patch+json',
+                                                                Authorization: ` Bearer ${accessToken}`
+                                                            },
+                                                            body: urlBody
+                                                        }
+
+                                                        const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
+
+                                                        // console.log(url);
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Updating CR on: ${url} \n`
+                                                        console.log(logMessage)
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        try {
+                                                            logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
+                                                            console.log(logMessage)
+                                                            fs.appendFile(logFileName, logMessage, function (err) {})
+                                                    
+                                                            const servReqCRResourceResponse = await fetch(url, options)
+                                                            const servReqCRJsonResponse = await servReqCRResourceResponse.json();
+
+                                                            console.log(servReqCRJsonResponse);
+                                                            return servReqCRJsonResponse;
+                                                            
+                                                            // const commReqArray = jsonResponse.entry;
+
+                                                        } catch(err) {
+                                                            logMessage = `ERROR (getAllComm_PreLang_EN_285), ${err} \n`
+                                                            console.log(logMessage)
+                                                            fs.appendFile(logFileName, logMessage, function (err) {})
+                                                        }
+                                                    }
+
+                                                    changeCommicationRequestStatus();
+
+                                                } else {
+                                                    logMessage = `Error (getAllComm_PreLang_EN_294): ${err} \n`
+                                                    console.log(logMessage)
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+                                                }
+                                            }
+                                        })
+
+                                    } else {
+
+                                        const sendMessagesArgs = {
+                                            session: session.return,
+                                            smsMessageMultiLang: {
+                                                sender: process.env.SMS_GTWY_SENDER_MASK,
+                                                message: smsMessageBody,
+                                                recipients: patientPhoneNo,                                                
+                                                messageType: process.env.SMS_GTWY_MESSAGE_TYPE
+                                            }
+                                        }
+                                
+                                        client.sendMessagesMultiLang(sendMessagesArgs, function(err, result) {
+                                            if(err) {
+                                                logMessage = `Error (getAllComm_PreLang_OTH_315): ${err} \n`
+                                                console.log(logMessage)
+                                                fs.appendFile(logFileName, logMessage, function (err) {})
+                                            } else {
+                                                // console.log('sendMessage')
+                                                console.log(result.return); // <--- should get 200
+        
+                                                if(result.return == 200) {
+                                                    // store in the db
+                                                    // console.log("Sent");
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                    console.log(logMessage)
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                    logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                    console.log(logMessage)
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                    //change CR status
+                                                    const changeCommicationRequestStatus = async function(req, res) {
+
+                                                        // console.log("Started closing CR");
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Started Closing CR \n`
+                                                        console.log(logMessage)
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        const urlBody = '[{ "op": "replace", "path": "/status", "value": "active"},{ "op": "replace", "path": "/status", "value": "completed"}]'
+
+                                                        const options = {
+                                                            method: 'PATCH',
+                                                            headers: {
+                                                                'Content-Type': 'application/json-patch+json',
+                                                                Authorization: ` Bearer ${accessToken}`
+                                                            },
+                                                            body: urlBody
+                                                        }
+
+                                                        const url = process.env.HAPI_BASE_URL + '/CommunicationRequest/' + commReqResourceId;
+
+                                                        // console.log(url);
+                                                        logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Updating CR on: ${url} \n`
+                                                        console.log(logMessage)
+                                                        fs.appendFile(logFileName, logMessage, function (err) {})
+
+                                                        try {
+                                                            logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting ServiceRequest Information \n`
+                                                            console.log(logMessage)
+                                                            fs.appendFile(logFileName, logMessage, function (err) {})
+                                                    
+                                                            const servReqCRResourceResponse = await fetch(url, options)
+                                                            const servReqCRJsonResponse = await servReqCRResourceResponse.json();
+
+                                                            console.log(servReqCRJsonResponse);
+                                                            return servReqCRJsonResponse;
+                                                            
+                                                            // const commReqArray = jsonResponse.entry;
+
+                                                        } catch(err) {
+                                                            logMessage = `ERROR (getAllComm_PreLang_OTH_373), ${err} \n`
+                                                            console.log(logMessage)
+                                                            fs.appendFile(logFileName, logMessage, function (err) {})
+                                                        }
+                                                    }
+
+                                                    changeCommicationRequestStatus();
+
+                                                } else {
+                                                    logMessage = `Error (getAllComm_PreLang_OTH_382): ${err} \n`
+                                                    console.log(logMessage)
+                                                    fs.appendFile(logFileName, logMessage, function (err) {})
+                                                }
+                                            }
+                                        })
+
+                                    }
+                                    
+                    
+                                }
+                            })
+                        }
+                    })
+                }
+
+                consolidatedData();
 
 
-            // consolidatedData().then(x=>{
-            //     console.log(x)
-            // });
+                // consolidatedData().then(x=>{
+                //     console.log(x)
+                // });
 
 
-        });        
+            });        
 
-        // console.log(commReqIds);
-        // return commReqIds;
-    }
+            // console.log(commReqIds);
+            // return commReqIds;
+        }
 
     } catch(err) {
-        logMessage = `Error: ${err} \n`
+        logMessage = `Error (getAllComm_getAllCommReq_411): ${err} \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
     }
 
@@ -385,17 +420,6 @@ const getAllCommunicationRequest = async function(req, res) {
 Store the information on db (client name, facilityname, referraldate, nic, phn, phone number, smsgeneratedon, smsgenerateduser,  sessionId)
 
 */
-
-app.get('/referredClients', (req, res) => {   
-
-    getAllCommunicationRequest().then(x => {
-        // Send the sms
-    })
-
-    res.send('loaded referredClients');    
-    
-})
-
 
 const upcomingAppointmentReminder = async function(req, res) {
 
@@ -415,12 +439,14 @@ const upcomingAppointmentReminder = async function(req, res) {
 
     try {
         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Checking active ServiceRequest \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
 
         const response = await fetch(url, options)
         const jsonResponse = await response.json();
 
         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total} \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
 
         if(jsonResponse.total > 0) {
@@ -459,6 +485,7 @@ const upcomingAppointmentReminder = async function(req, res) {
 
                         try {
                             logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information \n`
+                            console.log(logMessage)
                             fs.appendFile(logFileName, logMessage, function (err) {})
                     
                             const patientResourceResponse = await fetch(url, options)
@@ -470,7 +497,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                             // const commReqArray = jsonResponse.entry;
 
                         } catch(err) {
-                            logMessage = `Error: ${err} \n`
+                            logMessage = `Error (getAllComm_getPatientResource_501): ${err} \n`
+                            console.log(logMessage)
                             fs.appendFile(logFileName, logMessage, function (err) {})
                         }
                     }
@@ -488,8 +516,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                         // const facilityName = serviceReqData.entry[0].resource.locationReference[0].display;
                         // const referralDate = (serviceReqData.entry[0].resource.occurrencePeriod.start).substring(0, 10);
         
-                        if(patientData.identifier[1]) {
-                            patientNic = '('+patientData.identifier[1].value+')';
+                        if(patientData.identifier.find(o => o.use === 'usual')) {
+                            patientNic = '('+patientData.identifier.find(o => o.use === 'usual').value+')';
                         } else {
                             patientNic = "";
                         }
@@ -526,7 +554,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                         
                         soap.createClient(process.env.SMS_GTWY_PROVIDER_URL, function(err, client) {
                             if(err) {
-                                logMessage = `Error: ${err} \n`
+                                logMessage = `Error (getAllComm_Consolidate_Create_client_558): ${err} \n`
+                                console.log(logMessage)
                                 fs.appendFile(logFileName, logMessage, function (err) {})
                             } else {
                                 
@@ -534,17 +563,20 @@ const upcomingAppointmentReminder = async function(req, res) {
                         
                                 client.createSession(createSessionArgs, function(err, result) {
                                     if(err) {
-                                        logMessage = `Error: ${err} \n`
+                                        logMessage = `Error (getAllComm_createSession_567): ${err} \n`
+                                        console.log(logMessage)
                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                     } else {
                                         // console.log('createSession')
                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Session Initiated \n`
+                                        console.log(logMessage)
                                         fs.appendFile(logFileName, logMessage, function (err) {})
                         
                                         const session =  result;
                                         // console.log(session);
         
                                         // console.log(smsMessageBody)
+                                        
                                         
                                         if(prefLanguage === 'en') {
 
@@ -560,7 +592,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessages(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    logMessage = `Error: ${err} \n`
+                                                    logMessage = `Error  (getAllComm_PreLang_EN_596): ${err} \n`
+                                                    console.log(logMessage)
                                                     fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
@@ -570,12 +603,15 @@ const upcomingAppointmentReminder = async function(req, res) {
                                                         // store in the db
                                                         // console.log("Sent");
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
 
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        logMessage = `Error: ${err} \n`
+                                                        logMessage = `Error (getAllComm_sendSMS_614): ${err} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
@@ -595,7 +631,8 @@ const upcomingAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessagesMultiLang(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    logMessage = `Error: ${err} \n`
+                                                    logMessage = `Error  (getAllComm_PreLang_OTH_635): ${err} \n`
+                                                    console.log(logMessage)
                                                     fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
@@ -605,19 +642,21 @@ const upcomingAppointmentReminder = async function(req, res) {
                                                         // store in the db
                                                         // console.log("Sent");
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
 
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        logMessage = `Error: \n`
+                                                        logMessage = `Error (getAllComm_PreLang_OTH_653): \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
                                             })
 
                                         }
-                        
                                     }
                                 })
                             }
@@ -633,22 +672,12 @@ const upcomingAppointmentReminder = async function(req, res) {
         }
 
     } catch(err) {
-        logMessage = `Error: ${err} \n`
+        logMessage = `Error (getAllComm_UpcomingApp_676): ${err} \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
     }
 
 }
-
-//client who has appointment tomorrow
-app.get('/upcomingAppointment', (req, res) => {
-
-    upcomingAppointmentReminder().then(x => {
-        // Send the sms
-    })
-
-    res.send('loaded clientsWithUpcomingAppointment')
-
-});
 
 
 const missedAppointmentReminder = async function(req, res) {
@@ -669,12 +698,14 @@ const missedAppointmentReminder = async function(req, res) {
 
     try {
         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Checking active ServiceRequest \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
 
         const response = await fetch(url, options)
         const jsonResponse = await response.json();
 
         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Total Returned Resources: ${jsonResponse.total} \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
 
         if(jsonResponse.total > 0) {
@@ -723,6 +754,7 @@ const missedAppointmentReminder = async function(req, res) {
 
                         try {
                             logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t Getting Patient Information \n`
+                            console.log(logMessage)
                             fs.appendFile(logFileName, logMessage, function (err) {})
                     
                             const patientResourceResponse = await fetch(url, options)
@@ -734,7 +766,8 @@ const missedAppointmentReminder = async function(req, res) {
                             // const commReqArray = jsonResponse.entry;
 
                         } catch(err) {
-                            logMessage = `Error: ${err} \n`
+                            logMessage = `Error (getAllComm_getPatRes_770): ${err} \n`
+                            console.log(logMessage)
                             fs.appendFile(logFileName, logMessage, function (err) {})
                         }
                     }
@@ -756,8 +789,8 @@ const missedAppointmentReminder = async function(req, res) {
                         // console.log(patientId);
                         // console.log(servReqResourceId);
 
-                        if(patientData.identifier[1]) {
-                            patientNic = '('+patientData.identifier[1].value+')';
+                        if(patientData.identifier.find(o => o.use === 'usual')) {
+                            patientNic = '('+patientData.identifier.find(o => o.use === 'usual').value+')';
                         } else {
                             patientNic = "";
                         }
@@ -794,7 +827,8 @@ const missedAppointmentReminder = async function(req, res) {
                         
                         soap.createClient(process.env.SMS_GTWY_PROVIDER_URL, function(err, client) {
                             if(err) {
-                                logMessage = `Error: ${err} \n`
+                                logMessage = `Error (getAllComm_conso_createClient_831): ${err} \n`
+                                console.log(logMessage)
                                 fs.appendFile(logFileName, logMessage, function (err) {})
                             } else {
                                 
@@ -802,11 +836,13 @@ const missedAppointmentReminder = async function(req, res) {
                         
                                 client.createSession(createSessionArgs, function(err, result) {
                                     if(err) {
-                                        logMessage = `Error: ${err} \n`
+                                        logMessage = `Error (getAllComm_createSession_840): ${err} \n`
+                                        console.log(logMessage)
                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                     } else {
                                         // console.log('createSession')
                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Session Initiated \n`
+                                        console.log(logMessage)
                                         fs.appendFile(logFileName, logMessage, function (err) {})
                         
                                         const session =  result;
@@ -828,7 +864,8 @@ const missedAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessages(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    logMessage = `Error: ${err} \n`
+                                                    logMessage = `Error (getAllComm_PreLang_EN_868): ${err} \n`
+                                                    console.log(logMessage)
                                                     fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
@@ -838,12 +875,15 @@ const missedAppointmentReminder = async function(req, res) {
                                                         // store in the db
                                                         // console.log("Sent");
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
 
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        logMessage = `Error \n`
+                                                        logMessage = `Error  (getAllComm_sendSMS_886) \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
@@ -863,7 +903,8 @@ const missedAppointmentReminder = async function(req, res) {
                                     
                                             client.sendMessagesMultiLang(sendMessagesArgs, function(err, result) {
                                                 if(err) {
-                                                    logMessage = `Error: ${err} \n`
+                                                    logMessage = `Error (getAllComm_PreLang_OTH_907): ${err} \n`
+                                                    console.log(logMessage)
                                                     fs.appendFile(logFileName, logMessage, function (err) {})
                                                 } else {
                                                     // console.log('sendMessage')
@@ -873,18 +914,22 @@ const missedAppointmentReminder = async function(req, res) {
                                                         // store in the db
                                                         // console.log("Sent");
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS Sent to: ${patientPhoneNo} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
 
                                                         logMessage = `PROCESS: \t ${new Date().toLocaleString()} \t SMS content: ${smsMessageBody} \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     } else {
-                                                        logMessage = `Error: \n`
+                                                        logMessage = `Error  (missedAPP_sendSMS_925): \n`
+                                                        console.log(logMessage)
                                                         fs.appendFile(logFileName, logMessage, function (err) {})
                                                     }
                                                 }
                                             })
 
                                         }
+                                        */
                         
                                     }
                                 })
@@ -901,11 +946,33 @@ const missedAppointmentReminder = async function(req, res) {
         }
 
     } catch(err) {
-        logMessage = `Error: ${err} \n`
+        logMessage = `Error (missedApp_950): ${err} \n`
+        console.log(logMessage)
         fs.appendFile(logFileName, logMessage, function (err) {})
     }
 
 }
+
+app.get('/referredClients', (req, res) => {   
+
+    getAllCommunicationRequest().then(x => {
+        // Send the sms
+    })
+
+    res.send('loaded referredClients');    
+    
+})
+
+//client who has appointment tomorrow
+app.get('/upcomingAppointment', (req, res) => {
+
+    upcomingAppointmentReminder().then(x => {
+        // Send the sms
+    })
+
+    res.send('loaded clientsWithUpcomingAppointment')
+
+});
 
 //client who has missed the appointment
 app.get('/missedAppointment', (req, res) => {
@@ -925,6 +992,7 @@ app.get('/missedAppointment', (req, res) => {
 cron.schedule('* * * * *', () => {
     console.log('test')
     logMessage = `LIVE: NODE service live, ${new Date().toLocaleString()} \n`
+    console.log(logMessage)
     fs.appendFile(logFileName, logMessage, function (err) {})
 });
 
