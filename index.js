@@ -929,7 +929,6 @@ const missedAppointmentReminder = async function(req, res) {
                                             })
 
                                         }
-                                        */
                         
                                     }
                                 })
