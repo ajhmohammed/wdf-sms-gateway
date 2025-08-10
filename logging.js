@@ -1,50 +1,33 @@
-var fs = require('node:fs')
-const path = require('node:path')
+const fs = require('node:fs');
+const path = require('node:path');
 
 const logging = (logLevel, message) => {
+    const folderName = 'logs';
 
-    // Create a seperate folder for logging
-    const folderName = 'logs'
-
+    // Ensure logs folder exists
     if (!fs.existsSync(folderName)) {
-        fs.mkdir(folderName, {recursive:true}, (err) => {
-            if(err) {
-                console.error(`Error appending to file: ${err}`);
-            } else {
-                console.log('Content appended successfully.');
-                appendToFile();
-            }
-        });
-    } else {
-        appendToFile();
+        fs.mkdirSync(folderName, { recursive: true });
     }
 
-    function appendToFile() {
+    // Prepare log file name (YYYY-MM-DD)
+    const today = new Date();
+    const dateStr = today.toISOString().slice(0, 10).replace(/-/g, ''); // e.g., 20250806
+    const logFileName = `logs_${dateStr}.txt`;
+    const logFilePath = path.join(folderName, logFileName);
 
-        //Log filename based on the date
-        let today = new Date();
-        let year = today.getFullYear()
-        let month = String(today.getMonth() + 1).padStart(2, '0')
-        let date = String(today.getDate()).padStart(2, '0')
+    // Prepare log message
+    const logTime = new Date().toLocaleString();
+    const formattedLog = `${logTime}\t[${logLevel}]\t${message}\n`;
 
-        logFileName = `logs_${year+month+date}.txt`
+    // Print to console
+    console.log(formattedLog);
 
-        // Date time
-        logTime = new Date().toLocaleString();
+    // Append to file with error handling
+    fs.appendFileSync(logFilePath, formattedLog, (err) => {
+        if (err) {
+            console.error(`Error writing to log file: ${err.message}`);
+        }
+    });
+};
 
-        // log level [Error, Info, warn]
-        logLevel = "[" + logLevel + "]";
-
-        // Message
-        message = message; 
-
-        logMessage = logTime + "\t" + logLevel + "\t" + message + "\n";
-
-        console.log(logMessage);
-
-        fs.appendFile(`${folderName}/${logFileName}`, logMessage, function (err) {})
-
-    }
-}
-
-module.exports = logging
+module.exports = logging;

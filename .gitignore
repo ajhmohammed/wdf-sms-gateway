@@ -1,7 +1,9 @@
 node_modules
 .env
 package-lock.json
-logs.txt
+logs
 test.ts
+tests
+old_files
 
 todo

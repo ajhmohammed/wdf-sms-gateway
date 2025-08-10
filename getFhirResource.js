@@ -1,133 +1,167 @@
 const logging = require('./logging')
 const dotenv = require('dotenv');
-const { response } = require('express');
-const keycloakAuth = require('./keycloakAuth')
 dotenv.config();
 
-const getFhirResource = async (method, fhirResource, resourceId, query, bodyContent) => {
+const { getCachedToken } = require('./keycloakAuth')
 
-    const accessToken = await keycloakAuth.accessToken.get();
+const getFhirResource = async (
+    method, 
+    fhirResource, 
+    resourceId, 
+    query, 
+    bodyContent
+) => {
 
-    if(method == "GET") {
+    try {
 
-        const options = {
-            method: 'GET',
-            headers: {
-                Authorization: ` Bearer ${accessToken}`
-            }
+        const accessToken = await getCachedToken();
+
+        const headers = {
+            Authorization: `Bearer ${accessToken}`,
+        };
+
+        if (method === 'PATCH') {
+            headers['Content-Type'] = 'application/json-patch+json';
+        } else if (method === 'POST' || method === 'PUT') {
+            headers['Content-Type'] = 'application/fhir+json';
         }
 
-        const url = process.env.HAPI_BASE_URL + `/${fhirResource}` + (resourceId ? `/${resourceId}` : '') + (query ? `?${query}` : '')
+        const buildUrl = (url) => {
+            if (url) return url; // use full URL for pagination link (usually absolute)
+            return (
+                process.env.HAPI_BASE_URL +
+                `/${fhirResource}` +
+                (resourceId ? `/${resourceId}` : '') +
+                (query ? `?${query}` : '')
+            );
+        };
 
-        try {
+        // For PATCH method
+        if (method === 'PATCH') {
 
-            logging('Info', `Querying fhir server initiated (Url: ${url})`)
+            const url = buildUrl();
 
-            const urlResponse = await fetch(url, options)
-            const jsonResponse = await urlResponse.json();
+            logging('Info', `Patching resource. URL: ${url}`);
 
-            //return single resource if you have resource id
-            if(resourceId) {
+            const response = await fetch(url, {
+                method: 'PATCH',
+                headers,
+                body: bodyContent
+            });
 
-                logging('Info', `Resources returned based on the single resource query. Resource: ${fhirResource}, Resource id: ${resourceId}`)
+            const jsonResponse = await response.json();
 
-                if(jsonResponse) {
-
-                    return {
-                        response: jsonResponse,
-                        status: true
-                    }
-
-                } else {
-
-                    logging('Info', `Exitting since there is no resources.`)
-                    return {
-                        status: false
-                    };
-
-                }
-
+            if (response.ok && jsonResponse) {
+                logging('Info', `Successfully patched resource: ${fhirResource}, ID: ${resourceId}`);
+                return { response: jsonResponse, status: true };
             } else {
-
-                logging('Info', `Resources returned based on the query ${jsonResponse.total}`)
-
-                if(jsonResponse.total > 0) {
-
-                    return {
-                        response: jsonResponse,
-                        status: true
-                    }
-
-                } else {
-
-                    logging('Info', `Exitting since there is no resources. Returned resource count: ${jsonResponse.total}`)
-                    return {
-                        status: false
-                    };
-
-                }
+                logging('Error', `Failed to patch resource: ${resourceId} Status: ${response.status}`);
+                return { status: false };
             }
 
-        } catch(error) {
-
-            logging('Error', `Unable to query the fhir server. Error: ${error}`)
-            return false;
-
         }
 
-    } else if (method == "PATCH") {
+        // For GET method with pagination support
+        if(method == "GET") {
+            let url = buildUrl();
 
-        const options = {
-            method: 'PATCH',
-            headers: {
-                'Content-Type': 'application/json-patch+json',
-                Authorization: ` Bearer ${accessToken}`
-            },
-            body: bodyContent
-        }
+            logging('Info', `Starting GET request: ${url}`);
 
-        const url = process.env.HAPI_BASE_URL + `/${fhirResource}` + (resourceId ? `/${resourceId}` : '') + (query ? `?${query}` : '')
+            let allEntries = [];
+            let total = 0;
 
-        try {
+            while (url) {
+                logging('Info', `Fetching: ${url}`);
 
-            logging('Info', `Querying fhir server initiated (Url: ${url})`)
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers
+                });
 
-            const urlResponse = await fetch(url, options)
-            const jsonResponse = await urlResponse.json();
-
-            //return single resource if you have resource id
-
-
-            logging('Info', `Updating resource. Resource: ${fhirResource}, Resource id: ${resourceId}`)
-
-            if(jsonResponse) {
-
-                logging('Info', `Successfully updated the resource. Resource: ${fhirResource}, Resource id: ${resourceId}`)
-
-                return {
-                    response: jsonResponse,
-                    status: true
+                if (!response.ok) {
+                    logging('Error', `GET request failed with status ${response.status} for URL: ${url}`);
+                    return { status: false };
                 }
 
-            } else {
+                const jsonResponse = await response.json();
 
-                logging('Info', `Exitting since there is no resources.`)
+                //return single resource if you have resource id
+                if (resourceId) {
+                    // Single resource requested
+                    if (jsonResponse) {
+                        logging('Info', `Single resource found: ${fhirResource}/${resourceId}`);
+                        return { response: jsonResponse, status: true };
+                    } else {
+                        logging('Info', `No resource found for ID: ${resourceId}`);
+                        return { status: false };
+                    }
+                } else {
+                    // Bundle response, collect entries
+                    total = jsonResponse.total || 0;
+
+                    if (jsonResponse.entry && Array.isArray(jsonResponse.entry)) {
+                        allEntries = allEntries.concat(jsonResponse.entry);
+                    }
+
+                    // Find next link
+                    const nextLink = (jsonResponse.link || []).find((l) => l.relation === 'next');
+
+                    if (nextLink && nextLink.url) {
+                        url = nextLink.url;
+                    } else {
+                        url = null; // no more pages
+                    }
+                }
+            }
+
+            if (total > 0) {
+                logging('Info', `Fetched total ${allEntries.length} entries across pages.`);
                 return {
-                    status: false
+                response: {
+                    resourceType: 'Bundle',
+                    total,
+                    entry: allEntries,
+                },
+                status: true,
                 };
-
+            } else {
+                logging('Info', `No resources found for query.`);
+                return { status: false };
             }
+        }
 
+        // PUT / POST Method
+        if (method === 'POST' || method === 'PUT') {
 
-        } catch(error) {
+            const url = buildUrl();
 
-            logging('Error', `Unable to query the fhir server. Error: ${error}`)
-            return false;
+            logging('Info', `${method}ing resource. URL: ${url}`);
+
+            const response = await fetch(url, {
+                method: method,
+                headers,
+                body: bodyContent
+            });
+
+            const jsonResponse = await response.json();
+
+            if (response.ok && jsonResponse) {
+                logging('Info', `Successfully ${method.toLowerCase()}ed resource: ${fhirResource}, ID: ${resourceId || 'N/A'}`);
+                return { response: jsonResponse, status: true };
+            } else {
+                logging('Error', `Failed to ${method.toLowerCase()} resource: ${resourceId} Status: ${response.status}`);
+                return { status: false };
+            }
 
         }
 
+        // If method not supported
+        logging('Error', `Unsupported HTTP method: ${method}`);
+        return { status: false };  
+    } catch (error) {
+        logging('Error', `Exception in getFhirResource: ${error.message || error}`);
+        return false;
     }
-
-}
+};
 
 module.exports = getFhirResource
