@@ -2,7 +2,7 @@ const express = require('express')
 const app = express()
 app.use(express.json());
 const cron = require('node-cron')
-const logging = require('../logging')
+const logging = require('./logging')
 
 const { processCommunityReferredClients } = require('./cron/communityReferredClients.js');
 const { processCommunityUpcomingAppointments } = require('./cron/communityUpcomingAppointment.js');
